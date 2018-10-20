@@ -55,10 +55,14 @@ class Visual(object):
         self.waypoints_y = []
         self.pose_x = []
         self.pose_y = []
+        self.recent_pose_x = []
+        self.recent_pose_y = []
         self.vel_x = []
         self.vel_y = []
         self.lights_x = []
         self.lights_y = []
+        self.final_waypoints_x = []
+        self.final_waypoints_y = []
 
         self.has_image = False
         self.cv_image = None
@@ -79,6 +83,8 @@ class Visual(object):
         sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
         sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb)
 
+        rospy.Subscriber('/final_waypoints', Lane, self.final_waypoints_cb)
+
         # TODO: Add a subscriber for /traffic_waypoint and /obstacle_waypoint below
 
         # TODO: Add other member variables you need below
@@ -91,15 +97,23 @@ class Visual(object):
                 #table1.clear()
                 self.table1.plot(self.waypoints_x, self.waypoints_y)
                 if self.updatelock == 0:
-                    self.table2.plot(self.pose_x, self.pose_y)
+                    self.table1.plot(self.pose_x, self.pose_y)
                 if self.updatelock == 0:
-                    self.table2.plot(self.lights_x, self.lights_y)
+                    self.table1.plot(self.lights_x, self.lights_y)
                 if self.updatelock == 0:
                     self.table4.plot(self.vel_x, self.vel_y)
                 if (self.updatelock == 0) and self.has_image and (self.image_update == 1):
                     self.table3.cla()
                     self.table3.imshow(self.cv_image)
                     self.image_update = 0
+
+                if self.updatelock == 0:
+                    self.table2.cla()
+                if self.updatelock == 0:
+                    self.table2.plot(self.recent_pose_x, self.recent_pose_y)
+                if self.updatelock == 0:
+                    self.table2.plot(self.final_waypoints_x, self.final_waypoints_y)
+
                 plt.draw()
                 plt.pause(0.001)
             #print("loop")
@@ -169,6 +183,12 @@ class Visual(object):
         self.updatelock = 1
         self.pose_x.append(msg.pose.position.x)
         self.pose_y.append(msg.pose.position.y)
+        if len(self.pose_x) > 21:
+            self.recent_pose_x = self.pose_x[-20:]
+            self.recent_pose_y = self.pose_y[-20:]
+        else:
+            self.recent_pose_x = self.pose_x
+            self.recent_pose_y = self.pose_y
         self.updatelock = 0
         #print("new pose")
 
@@ -192,11 +212,34 @@ class Visual(object):
                     waypoint.pose.pose.position.y
                 ] for waypoint in waypoints.waypoints
             ]
+            maxdist = 0
+            prev_x = -1
+            prev_y = -1
             for waypoint in waypoints.waypoints:
                 self.waypoints_x.append(waypoint.pose.pose.position.x);
                 self.waypoints_y.append(waypoint.pose.pose.position.y);
+                if prev_x >= 0:
+                    x = waypoint.pose.pose.position.x - prev_x
+                    y = waypoint.pose.pose.position.y - prev_y
+
+                    dist = math.sqrt((x*x) + (y*y))
+                    if dist > maxdist:
+                        maxdist = dist
+                prev_x = waypoint.pose.pose.position.x
+                prev_y = waypoint.pose.pose.position.y
             # build KDTree
             self.waypoint_tree = KDTree(self.waypoints_2d)
+            # for Highway map, maxdist = 2.6486
+            print("Waypoints max distance between points = ",maxdist)
+
+    def final_waypoints_cb(self, waypoints):
+        self.updatelock = 1
+        self.final_waypoints_x = []
+        self.final_waypoints_y = []
+        for waypoint in waypoints.waypoints:
+            self.final_waypoints_x.append(waypoint.pose.pose.position.x);
+            self.final_waypoints_y.append(waypoint.pose.pose.position.y);
+        self.updatelock = 0
 
     def obstacle_cb(self, msg):
         # TODO: Callback for /obstacle_waypoint message. We will implement it later
