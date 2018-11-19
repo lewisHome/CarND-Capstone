@@ -5,6 +5,7 @@ import rospy
 from geometry_msgs.msg import PoseStamped
 from styx_msgs.msg import Lane
 from scipy.spatial import KDTree
+import copy
 
 import math
 
@@ -72,14 +73,38 @@ class WaypointUpdater(object):
             closest_idx = (closest_idx + 1) % len(self.waypoints_2d)
         return closest_idx
 
+    # get the distance of current position to idx
+    def dist_to_waypoint_idx(self, idx):
+        x = self.pose.pose.position.x - self.waypoints_2d[idx][0]
+        y = self.pose.pose.position.y - self.waypoints_2d[idx][1]
+        dist = math.sqrt((x*x) + (y*y))
+        return dist
+
+
     def publish_waypoints(self):
         if self.waypoint_tree:
             closest_wp_idx = self.get_closest_waypoint_idx()
             farthest_wp_idx = closest_wp_idx + LOOKAHEAD_WPS
+            dist_to_idx = self.dist_to_waypoint_idx(closest_wp_idx)
 
             lane = Lane()
             lane.header = self.base_waypoints.header
             lane.waypoints = self.base_waypoints.waypoints[closest_wp_idx:farthest_wp_idx]
+            if (dist_to_idx > 4.0) and (farthest_wp_idx < len(self.waypoints_2d)):
+                # if we are too far away from the given waypoints
+                # adjust the x,y of the first target_idx waypoints to join back the given waypoints at target_idx points later
+                lane.waypoints = copy.deepcopy(lane.waypoints)
+                target_idx = 40
+                target_x = lane.waypoints[target_idx].pose.pose.position.x
+                target_y = lane.waypoints[target_idx].pose.pose.position.y
+                now_x = self.pose.pose.position.x
+                now_y = self.pose.pose.position.y
+                step_x = (target_x - now_x)/target_idx
+                step_y = (target_y - now_y)/target_idx
+                for k in range(target_idx):
+                    lane.waypoints[k].pose.pose.position.x = now_x + step_x * (k+2)
+                    lane.waypoints[k].pose.pose.position.y = now_y + step_y * (k+2)
+
             self.final_waypoints_pub.publish(lane)
 
     def pose_cb(self, msg):
