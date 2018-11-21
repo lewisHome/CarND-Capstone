@@ -57,6 +57,7 @@ class TLDetector(object):
         self.last_wp = -1
         self.state_count = 0
 
+        self.updateRate = 8
         rospy.spin()
 
     def pose_cb(self, msg):
@@ -92,7 +93,7 @@ class TLDetector(object):
         self.has_image = True
         self.camera_image = msg
         light_wp, state = self.process_traffic_lights()
-        print(state)
+
         '''
         Publish upcoming red lights at camera frequency.
         Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
@@ -204,9 +205,10 @@ class TLDetector(object):
                 car_orient * light_orient > 1:
 
                 state = self.lights[light[2]].state
+                print("GROUND TRUTH STATE: ",state)
                 traffic_light_found = True
-                #state = self.get_light_state(light)
-
+                pred_state = self.get_light_state(light)
+                print("PREDICTION STATE: ",pred_state)
         if traffic_light_found:
             return light, state
         else:
