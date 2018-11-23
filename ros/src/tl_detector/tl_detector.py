@@ -40,7 +40,7 @@ class TLDetector(object):
         simulator. When testing on the vehicle, the color state will not be available. You'll need to
         rely on the position of the light and the camera image to predict it.
         '''
-        sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb, queue_size=1)
+        sub3 = rospy.Subscriber('/vehicle/traffic_lights', TrafficLightArray, self.traffic_cb, queue_size=1, buff_size = 2*52428800)
         sub6 = rospy.Subscriber('/image_color', Image, self.image_cb)
 
         config_string = rospy.get_param("/traffic_light_config")
@@ -72,14 +72,6 @@ class TLDetector(object):
             self.got_waypoints = True
             
     def traffic_cb(self, msg):
-        if not self.got_lights_map:
-            index = 0
-            for light in msg.lights:
-                self.lights_map.append((light.pose.pose.position.x,light.pose.pose.position.y,index))
-                index += 1
-            self.got_lights_map = True
-            print(self.lights_map)
-        
         self.lights = msg.lights
             
     def image_cb(self, msg):
@@ -93,7 +85,7 @@ class TLDetector(object):
         self.has_image = True
         self.camera_image = msg
         light_wp, state = self.process_traffic_lights()
-
+        
         '''
         Publish upcoming red lights at camera frequency.
         Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
@@ -107,6 +99,7 @@ class TLDetector(object):
             self.last_state = self.state
             light_wp = light_wp if state == TrafficLight.RED else -1
             self.last_wp = light_wp
+            print("LIGHT WAY POINT: ",light_wp)
             self.upcoming_red_light_pub.publish(Int32(light_wp))
         else:
             self.upcoming_red_light_pub.publish(Int32(self.last_wp))
@@ -139,7 +132,7 @@ class TLDetector(object):
                     
             return ind
         else:
-            return None
+            return
 
     def get_light_state(self, light):
         """Determines the current color of the traffic light
@@ -154,10 +147,13 @@ class TLDetector(object):
         if(not self.has_image):
             self.prev_light_loc = None
             return False
+        if self.light_classifier == None:
+            return
 
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
 
         #Get classification
+       
         return self.light_classifier.get_classification(cv_image)
 
     def process_traffic_lights(self):
@@ -176,7 +172,16 @@ class TLDetector(object):
        
         if self.waypoints == None:
             return
-            
+        
+        stop_x = 1e6
+        stop_y = 1e6
+        
+        for stop_line_position in stop_line_positions:
+            light_stop_pose = Pose()
+            light_stop_pose.position.x = stop_line_position[0]
+            light_stop_pose.position.y = stop_line_position[1]
+            light_stop_wp = self.get_closest_waypoint(light_stop_pose)
+
         if(self.pose):
             position_index = self.get_closest_waypoint(self.pose.pose)
             car_position = (self.waypoints[position_index].pose.pose.position.x,
@@ -196,23 +201,38 @@ class TLDetector(object):
 
         traffic_light_found = False
         
-        for light in self.lights_map:
+        for light in self.lights:
+            light_x = light.pose.pose.position.x
+            light_y = light.pose.pose.position.y
             
-            dist_to_light = (((light[0] - x)**2 + (light[1] - y)**2)**0.5)
-            light_orient = (light[0] - x + light[1] - y)
+            dist_to_light = (((light_x - x)**2 + (light_y - y)**2)**0.5)
+            light_orient = (light_x - x + light_y - y)
             car_orient = x_in_front - x + y_in_front - y
             if  dist_to_light < self.look_ahead_distance and \
                 car_orient * light_orient > 1:
 
-                state = self.lights[light[2]].state
+                state = light.state
                 print("GROUND TRUTH STATE: ",state)
                 traffic_light_found = True
                 pred_state = self.get_light_state(light)
-                print("PREDICTION STATE: ",pred_state)
-        if traffic_light_found:
-            return light, state
-        else:
-            return (0,0),4
+
+            
+            if pred_state == 0:
+                light_state = TrafficLight.RED
+            elif pred_state == 1:
+                light_state = TrafficLight.YELLOW
+            elif pred_state == 2:
+                light_state = TrafficLight.GREEN
+            else:
+                light_state = TrafficLight.UNKNOWN
+                
+            print("PREDICTION STATE: ",light_state)                
+            
+            if not traffic_light_found:           
+                -1, light_state
+            else:
+                return light_stop_wp, light_state
+
 
 if __name__ == '__main__':
     try:
