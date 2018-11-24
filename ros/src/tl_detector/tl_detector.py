@@ -175,6 +175,11 @@ class TLDetector(object):
         
         stop_x = 1e6
         stop_y = 1e6
+
+        if stop_line_positions == None:
+                print("stop_line_positions is None ")
+
+
         
         for stop_line_position in stop_line_positions:
             light_stop_pose = Pose()
@@ -200,7 +205,11 @@ class TLDetector(object):
         y_in_front = y + 1 * math.sin(theta)
 
         traffic_light_found = False
-        
+        light_state = TrafficLight.UNKNOWN        
+
+        if self.lights == None:
+                print("self.lights is None ")
+
         for light in self.lights:
             light_x = light.pose.pose.position.x
             light_y = light.pose.pose.position.y
@@ -221,21 +230,21 @@ class TLDetector(object):
                 pred_state = self.get_light_state(light)
 
             
-            if pred_state == 0:
-                light_state = TrafficLight.RED
-            elif pred_state == 1:
-                light_state = TrafficLight.YELLOW
-            elif pred_state == 2:
-                light_state = TrafficLight.GREEN
-            else:
-                light_state = TrafficLight.UNKNOWN
+                if pred_state == 0:
+                    light_state = TrafficLight.RED
+                elif pred_state == 1:
+                    light_state = TrafficLight.YELLOW
+                elif pred_state == 2:
+                    light_state = TrafficLight.GREEN
+                else:
+                    light_state = TrafficLight.UNKNOWN
                 
-            print("PREDICTION STATE: ",light_state)                
+                print("PREDICTION STATE: ",light_state)                
             
-            if not traffic_light_found:           
-                -1, light_state
-            else:
-                return light_stop_wp, light_state
+        if not traffic_light_found:           
+            return -1, light_state
+        else:
+            return light_stop_wp, light_state
 
 
 if __name__ == '__main__':
