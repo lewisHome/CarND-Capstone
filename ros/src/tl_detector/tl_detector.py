@@ -208,6 +208,10 @@ class TLDetector(object):
             dist_to_light = (((light_x - x)**2 + (light_y - y)**2)**0.5)
             light_orient = (light_x - x + light_y - y)
             car_orient = x_in_front - x + y_in_front - y
+
+            # prevent "referenced before assignment" error
+            pred_state = -1
+
             if  dist_to_light < self.look_ahead_distance and \
                 car_orient * light_orient > 1:
 
