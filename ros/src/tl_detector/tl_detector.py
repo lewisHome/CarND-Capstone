@@ -229,6 +229,11 @@ class TLDetector(object):
                 traffic_light_found = True
                 pred_state = self.get_light_state(light)
 
+                light_stop_pose = Pose()
+                light_stop_pose.position.x = light_x
+                light_stop_pose.position.y = light_y
+                light_stop_wp = self.get_closest_waypoint(light_stop_pose)
+
             
                 if pred_state == 0:
                     light_state = TrafficLight.RED
