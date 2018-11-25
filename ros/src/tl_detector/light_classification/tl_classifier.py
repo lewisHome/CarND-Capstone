@@ -5,8 +5,8 @@ import numpy as np
 class TLClassifier(object):
     def __init__(self):
 
-        model_name = 'ssd_mobilenet'
-        model_path = '/home/workspace/CarND-Capstone/ros/src/tl_detector/light_classification/frozen_ssd_mobilenet/frozen_inference_graph.pb'
+        model_name = 'ssd_mobilenet' #ssd_inception, ssd_mobilenet
+        model_path = '/home/workspace/CarND-Capstone/ros/src/tl_detector/light_classification/frozen_%s/frozen_inference_graph.pb'%model_name
         #PATH_TO_LABELS = 'label_map.pbtxt'
 
         detection_graph = tf.Graph()
@@ -43,6 +43,9 @@ class TLClassifier(object):
             int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
         """
+        #h,_,_ = image.shape
+        
+        #image_crop = image[:int(h*0.5),:] 
         image_np_expanded = np.expand_dims(image, axis=0)
         
         ret = self.sess.run(
@@ -50,12 +53,15 @@ class TLClassifier(object):
               feed_dict={self.image_tensor: image_np_expanded})
         
         prediction = ret[2][0][0]
+        boxes = ret[0][0][0]
+        ratio = (boxes[2]-boxes[0])/(boxes[3]-boxes[1])
+        score = ret[1][0][0]
         
-        if prediction == 1:
-            return 2
-        elif prediction == 2:
-            return 0
-        elif prediction == 3:
-            return 1
-        elif prediction == 4:
-            return 4
+        if prediction == 1 and ratio > 2.0 and score > 0.5:
+            return 2, score, ratio
+        elif prediction == 2 and ratio > 2.0 and score > 0.5:
+            return 0, score, ratio
+        elif prediction == 3 and ratio > 2.0 and score > 0.5:
+            return 1, score, ratio
+        else:
+            return 4, score, ratio
