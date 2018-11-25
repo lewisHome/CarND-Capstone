@@ -28,12 +28,20 @@ class TLDetector(object):
         self.lights = []
         self.lights_map = []
         self.got_lights_map=False
-        self.max_look_ahead_distance = 200.0
-        self.min_look_ahead_distance = 5.0
+        self.max_look_ahead_distance = 100.0
+        self.min_look_ahead_distance = 25.0
         self.light_distance = 0.0
+        
         self.pred_score = 0.0
         self.pred_ratio = 0.0
-
+        self.accuracy = 0.0
+        
+        self.last_image_time = rospy.get_time()
+        self.processing_image = False
+        
+        self.last_image_time = rospy.get_time()
+        self.processing_image = False
+    
         self.state = TrafficLight.UNKNOWN
         self.last_state = TrafficLight.UNKNOWN
         
@@ -66,7 +74,8 @@ class TLDetector(object):
         self.light_classifier = TLClassifier()
         self.listener = tf.TransformListener()
 
-        self.updateRate = 8
+        #self.updateRate = 8
+        #rate = rospy.Rate(2)
         rospy.spin()
 
     def pose_cb(self, msg):
@@ -91,53 +100,64 @@ class TLDetector(object):
             msg (Image): image from car-mounted camera
 
         """
-        self.has_image = True
-        self.camera_image = msg
-        try:
-            light_wp, state = self.process_traffic_lights()
-        except:
-            light_wp, state = -1, 4
-            pass
-        '''
-        Publish upcoming red lights at camera frequency.
-        Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
-        of times till we start using it. Otherwise the previous stable state is
-        used.
-        '''
-        if self.ground_truth != self.last_ground_truth:
-            print("======== GROUND TRUTH CHANGE ======")
-            print("GROUND TRUTH STATE: ",self.ground_truth)
-            print("PREDICTED STATE: ",self.state)
-            print("LIGHT WAY POINT: ",light_wp)
-            print("DISTANCE TO LIGHT: ",self.light_distance)
-            print("FRAME RATIO: ",self.pred_ratio)
-            print("FRAME SCORE: ",self.pred_score)
+        now_time = rospy.get_time()
+        # limit image update to max 2 fps
+        if (self.processing_image == False) and (now_time > (self.last_image_time + 0.5)):
+            self.last_image_time = now_time
             
-            self.ground_truth_count = 0
-            self.last_ground_truth = self.ground_truth
-            
-        if self.state != state:
-            self.state_count = 0
-            self.state = state
-        elif self.state_count >= STATE_COUNT_THRESHOLD:
-            if self.state_count == STATE_COUNT_THRESHOLD:
-                print("======== PREDICTION CHANGE ======")
+            self.has_image = True
+            self.camera_image = msg
+            try:
+                light_wp, state = self.process_traffic_lights()
+            except:
+                light_wp, state = -1, 4
+                pass
+            '''
+            Publish upcoming red lights at camera frequency.
+            Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
+            of times till we start using it. Otherwise the previous stable state is
+            used.
+            '''
+            if self.ground_truth != self.last_ground_truth:
+                print("======== GROUND TRUTH CHANGE ======")
                 print("GROUND TRUTH STATE: ",self.ground_truth)
                 print("PREDICTED STATE: ",self.state)
                 print("LIGHT WAY POINT: ",light_wp)
-                print("FRAME LAG FROM GROUND TRUTH: ", self.ground_truth_count)
                 print("DISTANCE TO LIGHT: ",self.light_distance)
                 print("FRAME RATIO: ",self.pred_ratio)
                 print("FRAME SCORE: ",self.pred_score)
+                if self.ground_truth_count != 0:
+                    print("LAST CLASS ACCURACY: ",self.accuracy/self.ground_truth_count)
+
+                self.ground_truth_count = 0
+                self.accuracy = 0
+                self.last_ground_truth = self.ground_truth
+            
+            if self.state != self.ground_truth:
+                self.accuracy += 1
                 
-            self.last_state = self.state
-            light_wp = light_wp if state == TrafficLight.RED else -1
-            self.last_wp = light_wp
-            self.upcoming_red_light_pub.publish(Int32(light_wp))
-        else:
-            self.upcoming_red_light_pub.publish(Int32(self.last_wp))
-        self.state_count += 1
-        self.ground_truth_count += 1
+            if self.state != state:
+                self.state_count = 0
+                self.state = state
+            elif self.state_count >= STATE_COUNT_THRESHOLD:
+                if self.state_count == STATE_COUNT_THRESHOLD:
+                    print("======== PREDICTION CHANGE ======")
+                    print("GROUND TRUTH STATE: ",self.ground_truth)
+                    print("PREDICTED STATE: ",self.state)
+                    print("LIGHT WAY POINT: ",light_wp)
+                    print("FRAME LAG FROM GROUND TRUTH: ", self.ground_truth_count)
+                    print("DISTANCE TO LIGHT: ",self.light_distance)
+                    print("FRAME RATIO: ",self.pred_ratio)
+                    print("FRAME SCORE: ",self.pred_score)
+
+                self.last_state = self.state
+                light_wp = light_wp if state == TrafficLight.RED else -1
+                self.last_wp = light_wp
+                self.upcoming_red_light_pub.publish(Int32(light_wp))
+            else:
+                self.upcoming_red_light_pub.publish(Int32(self.last_wp))
+            self.state_count += 1
+            self.ground_truth_count += 1
 
     def get_closest_waypoint(self, pose):
         """Identifies the closest path waypoint to the given position
@@ -224,7 +244,7 @@ class TLDetector(object):
             light_x = light.pose.pose.position.x
             light_y = light.pose.pose.position.y
             
-            self.light_distance = (((light_x - x)**2 + (light_y - y)**2)**0.5)
+            light_distance = (((light_x - x)**2 + (light_y - y)**2)**0.5)
             light_orient = (light_x - x + light_y - y)
             car_orient = x_in_front - x + y_in_front - y
 
@@ -232,11 +252,12 @@ class TLDetector(object):
             pred_state = -1
                
             #determine if the closest light is in front or behind the car
-            if  self.light_distance < self.max_look_ahead_distance and \
-                self.light_distance > self.min_look_ahead_distance and \
+            if  light_distance < self.max_look_ahead_distance and \
+                light_distance > self.min_look_ahead_distance and \
                 car_orient * light_orient > 1:
 
                 self.ground_truth = light.state
+                self.light_distance = light_distance
                 traffic_light_found = True
                 try:
                     pred_state, self.pred_score, self.pred_ratio = self.get_light_state(light)
@@ -265,7 +286,7 @@ class TLDetector(object):
                     light_state = TrafficLight.GREEN
                 else:
                     light_state = TrafficLight.UNKNOWN               
-            
+    
         if not traffic_light_found:          
             return -1, light_state
         else:
