@@ -39,9 +39,6 @@ class TLDetector(object):
         self.last_image_time = rospy.get_time()
         self.processing_image = False
         
-        self.last_image_time = rospy.get_time()
-        self.processing_image = False
-    
         self.state = TrafficLight.UNKNOWN
         self.last_state = TrafficLight.UNKNOWN
         
