@@ -99,7 +99,7 @@ class TLDetector(object):
         """
         now_time = rospy.get_time()
         # limit image update to max 2 fps
-        if (self.processing_image == False) and (now_time > (self.last_image_time + 0.5)):
+        if (self.processing_image == False) and (now_time > (self.last_image_time + 0.1)):
             self.last_image_time = now_time
             
             self.has_image = True
