@@ -1,6 +1,7 @@
 from styx_msgs.msg import TrafficLight
 import tensorflow as tf
 import numpy as np
+import cv2
 
 class TLClassifier(object):
     def __init__(self):
@@ -49,21 +50,42 @@ class TLClassifier(object):
                  [self.detection_boxes, self.detection_scores, self.detection_classes, self.num_detections],
                  feed_dict={self.image_tensor: image_np_expanded})
 
-    #        boxes = np.squeeze(boxes)
+           boxes = np.squeeze(boxes)
            scores = np.squeeze(scores)
            classes = np.squeeze(classes)
 
            prediction = int(np.around(np.median(classes[:3])))
 
+           i=0
+           h,w,_=image.shape
+           for box in boxes:
+               #print(box)
+               x1,y1,x2,y2 = box
+               x1 = int(h*x1)
+               y1 = int(w*y1)
+               x2 = int(h*x2)
+               y2 = int(w*y2)
+               if classes[i] == 1:
+                   image = cv2.rectangle(image,(y1,x1),(y2,x2),(0,255,0))
+               elif classes[i] == 2:
+                   image = cv2.rectangle(image,(y1,x1),(y2,x2),(0,0,255))
+               elif classes[i] == 1:
+                   image = cv2.rectangle(image,(y1,x1),(y2,x2),(0,255,255))
+               elif classes[i] == 1:
+                   image = cv2.rectangle(image,(y1,x1),(y2,x2),(255,0,0))
+               i+=1
+               if i ==3:
+                    break
+                    
            if prediction == 1:
                print("GREEN")
-               return 2
+               return 2, image
            elif prediction == 2:
                print("RED")
-               return 0
+               return 0, image
            elif prediction == 3:
                print("YELLOW")
-               return 1
+               return 1, image
            else:
                print("UNKOWN")
-               return 4
+               return 4, image
