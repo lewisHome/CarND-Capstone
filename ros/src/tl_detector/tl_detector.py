@@ -257,7 +257,7 @@ class TLDetector(object):
                 self.light_distance = light_distance
                 traffic_light_found = True
                 #try:
-                pred_state, self.pred_score, self.pred_ratio = self.get_light_state(light)
+                pred_state = self.get_light_state(light)
                 #except:
                 #    pred_state = 4
                     
