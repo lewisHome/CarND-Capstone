@@ -1,4 +1,21 @@
 This is the project repo for the final project of the Udacity Self-Driving Car Nanodegree: Programming a Real Self-Driving Car. For more information about the project, see the project introduction [here](https://classroom.udacity.com/nanodegrees/nd013/parts/6047fe34-d93c-4f50-8336-b70ef10cb4b2/modules/e1a23b06-329a-4684-a717-ad476f0d8dff/lessons/462c933d-9f24-42d3-8bdc-a08a5fc866e4/concepts/5ab4b122-83e6-436d-850f-9f4d26627fd9).
+The aim of the project is to enable Carla (Udacity's self driving car) to go around the testtrack using waypoint navigation, stopping at the red lights by controlling throttle brake and steer. 
+
+# System Architecture
+
+The following is a system architecture diagram showing the ROS nodes and topics
+![alt text](imgs/inference/final-project-ros-graph-v2.png)
+
+The primary nodes are:
+
+### Perception
+This takes in feed from the camera and identifies if the upcoming traffic light is red or not. It then publishes the locations to stop for red traffic lights.
+
+### Control
+Carla is equipped with a drive-by-wire (dbw) system, meaning the throttle, brake, and steering have electronic control. This node is responsible for controlling the car based on the waypoint navigation.
+
+### Waypoint Updater
+Purpose of this node is to update the target velocity property of each waypoint based on traffic light and obstacle detection data.
 
 # Team Members
 #### Sam Thomas
@@ -9,6 +26,10 @@ Trained the traffic light detector. Inference speed is ~14ms on a maxQ 1050ti.
 Code in repository [https://github.com/swarmt/CarND-Traffic-Light-Detection]
 ![alt text](imgs/inference/left0000.jpg)
 ![alt text](imgs/inference/left0027.jpg)
+
+#### Archit Rastogi
+Implemented the full waypoint updater. Modified the code to create a final_waypoints message from the base waypoints.
+Based on the /traffic_waypoint values, changed the waypoint target velocities to stop the car smoothly before the stop line when it sees a red light. 
 
 
 # Installation
