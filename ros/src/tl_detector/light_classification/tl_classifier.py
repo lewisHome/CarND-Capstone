@@ -33,37 +33,37 @@ class TLClassifier(object):
                 self.detection_classes = detection_graph.get_tensor_by_name('detection_classes:0')
                 self.num_detections = detection_graph.get_tensor_by_name('num_detections:0')
 
-def get_classification(self, image):
-       """Determines the color of the traffic light in the image
+    def get_classification(self, image):
+           """Determines the color of the traffic light in the image
 
-       Args:
-           image (cv::Mat): image containing the traffic light
+           Args:
+               image (cv::Mat): image containing the traffic light
 
-       Returns:
-           int: ID of traffic light color (specified in styx_msgs/TrafficLight)
+           Returns:
+               int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
-       """
-       image_np_expanded = np.expand_dims(image, axis=0)
+           """
+           image_np_expanded = np.expand_dims(image, axis=0)
 
-       (boxes,scores,classes,num_detections) = self.sess.run(
-             [self.detection_boxes, self.detection_scores, self.detection_classes, self.num_detections],
-             feed_dict={self.image_tensor: image_np_expanded})
+           (boxes,scores,classes,num_detections) = self.sess.run(
+                 [self.detection_boxes, self.detection_scores, self.detection_classes, self.num_detections],
+                 feed_dict={self.image_tensor: image_np_expanded})
 
-#        boxes = np.squeeze(boxes)
-       scores = np.squeeze(scores)
-       classes = np.squeeze(classes)
+    #        boxes = np.squeeze(boxes)
+           scores = np.squeeze(scores)
+           classes = np.squeeze(classes)
 
-       prediction = int(np.around(np.median(classes[:3])))
+           prediction = int(np.around(np.median(classes[:3])))
 
-       if prediction == 1:
-           print("GREEN")
-           return 2
-       elif prediction == 2:
-           print("RED")
-           return 0
-       elif prediction == 3:
-           print("YELLOW")
-           return 1
-       else:
-           print("UNKOWN")
-           return 4
+           if prediction == 1:
+               print("GREEN")
+               return 2
+           elif prediction == 2:
+               print("RED")
+               return 0
+           elif prediction == 3:
+               print("YELLOW")
+               return 1
+           else:
+               print("UNKOWN")
+               return 4
