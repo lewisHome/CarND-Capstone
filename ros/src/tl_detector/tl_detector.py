@@ -28,7 +28,7 @@ class TLDetector(object):
         self.lights = []
         self.lights_map = []
         self.got_lights_map=False
-        self.max_look_ahead_distance = 100.0
+        self.max_look_ahead_distance = 50.0
         self.min_look_ahead_distance = 25.0
         self.light_distance = 0.0
         
@@ -104,11 +104,11 @@ class TLDetector(object):
             
             self.has_image = True
             self.camera_image = msg
-            try:
-                light_wp, state = self.process_traffic_lights()
-            except:
-                light_wp, state = -1, 4
-                pass
+            #try:
+            light_wp, state = self.process_traffic_lights()
+            #except:
+            #    light_wp, state = -1, 4
+            #    pass
             '''
             Publish upcoming red lights at camera frequency.
             Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
@@ -256,10 +256,10 @@ class TLDetector(object):
                 self.ground_truth = light.state
                 self.light_distance = light_distance
                 traffic_light_found = True
-                try:
-                    pred_state, self.pred_score, self.pred_ratio = self.get_light_state(light)
-                except:
-                    pred_state = 4
+                #try:
+                pred_state, self.pred_score, self.pred_ratio = self.get_light_state(light)
+                #except:
+                #    pred_state = 4
                     
                 minimum_light_to_line_distance = 1e6
                 light_stop_pose = Pose()
