@@ -30,7 +30,7 @@ Code in repository [https://github.com/swarmt/CarND-Traffic-Light-Detection]
 
 
 
-#### Archit Rastogi (archit.rstg*at*gmail.com)
+#### Archit Rastogi (archit.rstg *at* gmail.com)
 Implemented the full waypoint updater. Modified the code to create a final_waypoints message from the base waypoints.
 Based on the /traffic_waypoint values, changed the waypoint target velocities to stop the car smoothly before the stop line when it sees a red light. Its done in two steps:
 
