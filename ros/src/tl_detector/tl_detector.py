@@ -28,9 +28,10 @@ class TLDetector(object):
         self.lights = []
         self.lights_map = []
         self.got_lights_map=False
-        self.max_look_ahead_distance = 50.0
+        self.max_look_ahead_distance = 100.0
         self.min_look_ahead_distance = 25.0
         self.light_distance = 0.0
+        self.image = None
         
         self.pred_score = 0.0
         self.pred_ratio = 0.0
@@ -116,16 +117,6 @@ class TLDetector(object):
             used.
             '''
             if self.ground_truth != self.last_ground_truth:
-                print("======== GROUND TRUTH CHANGE ======")
-                print("GROUND TRUTH STATE: ",self.ground_truth)
-                print("PREDICTED STATE: ",self.state)
-                print("LIGHT WAY POINT: ",light_wp)
-                print("DISTANCE TO LIGHT: ",self.light_distance)
-                print("FRAME RATIO: ",self.pred_ratio)
-                print("FRAME SCORE: ",self.pred_score)
-                if self.ground_truth_count != 0:
-                    print("LAST CLASS ACCURACY: ",self.accuracy/self.ground_truth_count)
-
                 self.ground_truth_count = 0
                 self.accuracy = 0
                 self.last_ground_truth = self.ground_truth
@@ -141,11 +132,7 @@ class TLDetector(object):
                     print("======== PREDICTION CHANGE ======")
                     print("GROUND TRUTH STATE: ",self.ground_truth)
                     print("PREDICTED STATE: ",self.state)
-                    print("LIGHT WAY POINT: ",light_wp)
-                    print("FRAME LAG FROM GROUND TRUTH: ", self.ground_truth_count)
-                    print("DISTANCE TO LIGHT: ",self.light_distance)
-                    print("FRAME RATIO: ",self.pred_ratio)
-                    print("FRAME SCORE: ",self.pred_score)
+
 
                 self.last_state = self.state
                 light_wp = light_wp if state == TrafficLight.RED else -1
@@ -234,7 +221,6 @@ class TLDetector(object):
 
         traffic_light_found = False
         light_state = TrafficLight.UNKNOWN        
-
 
         # run through all the lights and find out if there is a light close enough to be concerened about
         for light in self.lights:

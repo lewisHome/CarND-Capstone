@@ -1,13 +1,14 @@
 from styx_msgs.msg import TrafficLight
 import tensorflow as tf
 import numpy as np
+import cv2
+import sys
 
 class TLClassifier(object):
     def __init__(self):
-
+        
         model_name = 'ssd_mobilenet' #ssd_inception, ssd_mobilenet
         model_path = '/home/workspace/CarND-Capstone/ros/src/tl_detector/light_classification/frozen_%s/frozen_inference_graph.pb'%model_name
-        #PATH_TO_LABELS = 'label_map.pbtxt'
 
         detection_graph = tf.Graph()
 
@@ -43,27 +44,25 @@ class TLClassifier(object):
                int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
            """
+           image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
            image_np_expanded = np.expand_dims(image, axis=0)
 
-           (boxes,scores,classes,num_detections) = self.sess.run(
+           (_,scores,classes,_) = self.sess.run(
                  [self.detection_boxes, self.detection_scores, self.detection_classes, self.num_detections],
                  feed_dict={self.image_tensor: image_np_expanded})
 
-    #        boxes = np.squeeze(boxes)
            scores = np.squeeze(scores)
-           classes = np.squeeze(classes)
+           classes = np.squeeze(classes).astype(np.int32)
 
-           prediction = int(np.around(np.median(classes[:3])))
-
+           if scores[0]>0.1:
+               prediction = classes[0]
+           
+           #remap classes to match simulator ground truth
            if prediction == 1:
-               print("GREEN")
                return 2
            elif prediction == 2:
-               print("RED")
                return 0
            elif prediction == 3:
-               print("YELLOW")
                return 1
            else:
-               print("UNKOWN")
                return 4
