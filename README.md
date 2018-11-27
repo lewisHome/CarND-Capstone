@@ -1,5 +1,5 @@
 This is the project repo for the final project of the Udacity Self-Driving Car Nanodegree: Programming a Real Self-Driving Car. For more information about the project, see the project introduction [here](https://classroom.udacity.com/nanodegrees/nd013/parts/6047fe34-d93c-4f50-8336-b70ef10cb4b2/modules/e1a23b06-329a-4684-a717-ad476f0d8dff/lessons/462c933d-9f24-42d3-8bdc-a08a5fc866e4/concepts/5ab4b122-83e6-436d-850f-9f4d26627fd9).
-The aim of the project is to enable Carla (Udacity's self driving car) to go around the testtrack using waypoint navigation, stopping at the red lights by controlling throttle brake and steer. 
+The aim of the project is to enable Carla (Udacity's self driving car) to go around the testtrack using waypoint navigation, stopping at the red lights by controlling throttle brake and steer.
 
 # System Architecture
 
@@ -19,6 +19,7 @@ Purpose of this node is to update the target velocity property of each waypoint 
 
 # Team Members
 #### Sam Thomas
+`samthomasdigital at gmail dot com`
 Implemented the partial waypoint updater. Modified the waypoint follower to follow more precisely. Code in branch `st/walkthrough`.
 
 Trained the traffic light detector. Inference speed is ~14ms on a maxQ 1050ti.
@@ -31,12 +32,12 @@ Code in repository [https://github.com/swarmt/CarND-Traffic-Light-Detection]
 
 #### Archit Rastogi
 Implemented the full waypoint updater. Modified the code to create a final_waypoints message from the base waypoints.
-Based on the /traffic_waypoint values, changed the waypoint target velocities to stop the car smoothly before the stop line when it sees a red light. 
+Based on the /traffic_waypoint values, changed the waypoint target velocities to stop the car smoothly before the stop line when it sees a red light.
 
 
 
 #### Dai Siyang
-Integrated code from team members. Performed trial runs in simulator for both Highway and Test Lot scenarios and provided feedback videos for debugging. Analyzed training rosbag files and simulator ROS messages published. 
+Integrated code from team members. Performed trial runs in simulator for both Highway and Test Lot scenarios and provided feedback videos for debugging. Analyzed training rosbag files and simulator ROS messages published.
 Assisted Sam in training traffic light detector.
 
 
