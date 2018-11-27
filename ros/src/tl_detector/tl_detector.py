@@ -28,7 +28,7 @@ class TLDetector(object):
         self.lights = []
         self.lights_map = []
         self.got_lights_map=False
-        self.max_look_ahead_distance = 50.0
+        self.max_look_ahead_distance = 100.0
         self.min_look_ahead_distance = 25.0
         self.light_distance = 0.0
         self.image = None
@@ -124,8 +124,8 @@ class TLDetector(object):
                 print("DISTANCE TO LIGHT: ",self.light_distance)
                 print("FRAME RATIO: ",self.pred_ratio)
                 print("FRAME SCORE: ",self.pred_score)
-                #fileName = "GT"+str(self.ground_truth)+'PS'+str(self.state)+'DIST'+str(self.light_distance)+'.png'
-                #cv2.imwrite(fileName,self.image)
+                fileName = "GROUND_TRUTH"+str(self.ground_truth)+'PS'+str(self.state)+'DIST'+str(self.light_distance)+'.png'
+                cv2.imwrite(fileName,self.image)
                 if self.ground_truth_count != 0:
                     print("LAST CLASS ACCURACY: ",self.accuracy/self.ground_truth_count)
 
@@ -239,7 +239,6 @@ class TLDetector(object):
 
         traffic_light_found = False
         light_state = TrafficLight.UNKNOWN        
-
 
         # run through all the lights and find out if there is a light close enough to be concerened about
         for light in self.lights:
