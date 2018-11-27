@@ -43,6 +43,10 @@ Based on the /traffic_waypoint values, changed the waypoint target velocities to
 Integrated code from team members. Performed trial runs in simulator for both Highway and Test Lot scenarios and provided feedback videos for debugging. Analyzed training rosbag files and simulator ROS messages published.
 Assisted Sam in training traffic light detector.
 
+#### Ong Chin Kiat (chinkiat *at* gmail.com)
+Reduce the chance of car going off road, especially on slow systems, by modifying waypoints to guide the car back on track when the PID controller is failing. Integration testing and debugging.
+
+
 
 
 # Installation
