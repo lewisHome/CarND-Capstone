@@ -117,18 +117,6 @@ class TLDetector(object):
             used.
             '''
             if self.ground_truth != self.last_ground_truth:
-                print("======== GROUND TRUTH CHANGE ======")
-                print("GROUND TRUTH STATE: ",self.ground_truth)
-                print("PREDICTED STATE: ",self.state)
-                print("LIGHT WAY POINT: ",light_wp)
-                print("DISTANCE TO LIGHT: ",self.light_distance)
-                print("FRAME RATIO: ",self.pred_ratio)
-                print("FRAME SCORE: ",self.pred_score)
-                fileName = "GROUND_TRUTH"+str(self.ground_truth)+'PS'+str(self.state)+'DIST'+str(self.light_distance)+'.png'
-                cv2.imwrite(fileName,self.image)
-                if self.ground_truth_count != 0:
-                    print("LAST CLASS ACCURACY: ",self.accuracy/self.ground_truth_count)
-
                 self.ground_truth_count = 0
                 self.accuracy = 0
                 self.last_ground_truth = self.ground_truth
@@ -144,13 +132,7 @@ class TLDetector(object):
                     print("======== PREDICTION CHANGE ======")
                     print("GROUND TRUTH STATE: ",self.ground_truth)
                     print("PREDICTED STATE: ",self.state)
-                    print("LIGHT WAY POINT: ",light_wp)
-                    print("FRAME LAG FROM GROUND TRUTH: ", self.ground_truth_count)
-                    print("DISTANCE TO LIGHT: ",self.light_distance)
-                    print("FRAME RATIO: ",self.pred_ratio)
-                    print("FRAME SCORE: ",self.pred_score)
-                    fileName = "GT"+str(self.ground_truth)+'PS'+str(self.state)+'DIST'+str(self.light_distance)+'.png'
-                    cv2.imwrite(fileName,self.image)
+
 
                 self.last_state = self.state
                 light_wp = light_wp if state == TrafficLight.RED else -1
@@ -261,7 +243,7 @@ class TLDetector(object):
                 self.light_distance = light_distance
                 traffic_light_found = True
                 #try:
-                pred_state, self.image = self.get_light_state(light)
+                pred_state = self.get_light_state(light)
                 #except:
                 #    pred_state = 4
                     
