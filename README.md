@@ -34,6 +34,13 @@ Implemented the full waypoint updater. Modified the code to create a final_waypo
 Based on the /traffic_waypoint values, changed the waypoint target velocities to stop the car smoothly before the stop line when it sees a red light. 
 
 
+
+#### Dai Siyang
+Integrated code from team members. Performed trial runs in simulator for both Highway and Test Lot scenarios and provided feedback videos for debugging. Analyzed training rosbag files and simulator ROS messages published. 
+Assisted Sam in training traffic light detector.
+
+
+
 # Installation
 
 Please use **one** of the two installation options, either native **or** docker installation.
