@@ -56,16 +56,12 @@ class TLDetector(object):
 
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
-        site = self.config['is_site']
+        self.site = self.config['is_site']
         
         #THe classifier is only invoked within a certain distance of the traffic light
         #The required paramters are different for site and simulator
-        if site:
-            self.max_look_ahead_distance = 30.0
-            self.min_look_ahead_distance = 2.0        
-        else:
-            self.max_look_ahead_distance = 100.0
-            self.min_look_ahead_distance = 25.0
+        self.max_look_ahead_distance = 100.0
+        self.min_look_ahead_distance = 25.0
 
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
 
@@ -100,11 +96,11 @@ class TLDetector(object):
             
             #Try and except invoked to ensure a stop condition is passed to the path planner
             #if the traffic light classifier is not functioning
-            try:
-                light_wp, state = self.process_traffic_lights()
-            except:
-                light_wp = -1
-                state = 0
+            #try:
+            light_wp, state = self.process_traffic_lights()
+            #except:
+            #    light_wp = -1
+            #    state = 0
 
             '''
             Publish upcoming red lights at camera frequency.
@@ -195,53 +191,61 @@ class TLDetector(object):
         if self.waypoints == None:
             return
         
-        #determine direction of car travel
-        q = [self.pose.pose.orientation.x, self.pose.pose.orientation.y, self.pose.pose.orientation.z, self.pose.pose.orientation.w]       
-        theta = tf.transformations.euler_from_quaternion(q)[2]
-        x = self.pose.pose.position.x
-        x_in_front = x  + 1 * math.cos(theta)
-        y = self.pose.pose.position.y
-        y_in_front = y + 1 * math.sin(theta)
+        if not self.site:
+            #determine direction of car travel
+            q = [self.pose.pose.orientation.x, self.pose.pose.orientation.y, self.pose.pose.orientation.z, self.pose.pose.orientation.w]       
+            theta = tf.transformations.euler_from_quaternion(q)[2]
+            x = self.pose.pose.position.x
+            x_in_front = x  + 1 * math.cos(theta)
+            y = self.pose.pose.position.y
+            y_in_front = y + 1 * math.sin(theta)
 
-        traffic_light_found = False
-        pred_state = TrafficLight.UNKNOWN        
+            traffic_light_found = False
+            pred_state = TrafficLight.UNKNOWN        
 
-        # run through all the lights and find out if there is a light close enough to be concerened about
-        for light in self.lights:
-            light_x = light.pose.pose.position.x
-            light_y = light.pose.pose.position.y
-            
-            light_distance = (((light_x - x)**2 + (light_y - y)**2)**0.5)
-            light_orient = (light_x - x + light_y - y)
-            car_orient = x_in_front - x + y_in_front - y
+            # run through all the lights and find out if there is a light close enough to be concerened about
+            for light in self.lights:
+                light_x = light.pose.pose.position.x
+                light_y = light.pose.pose.position.y
 
-            # prevent "referenced before assignment" error
-            pred_state = -1
-            #determine if the closest light is close enought to worry about
-            #determine if we have passed the stop line
-            #and determine that the light is infront of the car
-            if  light_distance < self.max_look_ahead_distance and \
-                light_distance > self.min_look_ahead_distance and \
-                car_orient * light_orient > 1:
+                light_distance = (((light_x - x)**2 + (light_y - y)**2)**0.5)
+                light_orient = (light_x - x + light_y - y)
+                car_orient = x_in_front - x + y_in_front - y
 
-                traffic_light_found = True
-                pred_state = self.get_light_state(light)
-                  
-                minimum_light_to_line_distance = 1e6
-                light_stop_pose = Pose()
-                
-                #find stop line closest to light
-                for stop_line in self.config['stop_line_positions']:
-                    light_to_stop_line_distance = (((light_x - stop_line[0])**2 + (light_y - stop_line[1])**2)**0.5)
-                    if light_to_stop_line_distance < minimum_light_to_line_distance:
-                        minimum_light_to_line_distance = light_to_stop_line_distance
-                        light_stop_pose.position.x = stop_line[0]
-                        light_stop_pose.position.y = stop_line[1]
-                
-                #find waypoint corresponding to stop line
-                light_stop_wp = self.get_closest_waypoint(light_stop_pose)
-                break
-                
+                # prevent "referenced before assignment" error
+                pred_state = -1
+                #determine if the closest light is close enought to worry about
+                #determine if we have passed the stop line
+                #and determine that the light is infront of the car
+                if  light_distance < self.max_look_ahead_distance and \
+                    light_distance > self.min_look_ahead_distance and \
+                    car_orient * light_orient > 1:
+
+                    traffic_light_found = True
+                    pred_state = self.get_light_state(light)
+
+                    minimum_light_to_line_distance = 1e6
+                    light_stop_pose = Pose()
+
+                    #find stop line closest to light
+                    for stop_line in self.config['stop_line_positions']:
+                        light_to_stop_line_distance = (((light_x - stop_line[0])**2 + (light_y - stop_line[1])**2)**0.5)
+                        if light_to_stop_line_distance < minimum_light_to_line_distance:
+                            minimum_light_to_line_distance = light_to_stop_line_distance
+                            light_stop_pose.position.x = stop_line[0]
+                            light_stop_pose.position.y = stop_line[1]
+
+                    #find waypoint corresponding to stop line
+                    light_stop_wp = self.get_closest_waypoint(light_stop_pose)
+                    break
+        else:
+            #stop_line = self.config['stop_line_positions']
+            light_stop_pose = Pose()
+            light_stop_pose.position.x = 8.0
+            light_stop_pose.position.y = 16.2
+            light_stop_wp = self.get_closest_waypoint(light_stop_pose)
+            pred_state = self.get_light_state(light)
+			traffic_light_found = True
         #if traffic light not found then we are free to travel else pass
         #light stop line and predicted light state
         if not traffic_light_found:          
