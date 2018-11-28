@@ -13,7 +13,7 @@ import math
 
 import tf
 
-STATE_COUNT_THRESHOLD = 3
+STATE_COUNT_THRESHOLD = 0
 
 class TLDetector(object):
     def __init__(self):
@@ -61,8 +61,8 @@ class TLDetector(object):
         #THe classifier is only invoked within a certain distance of the traffic light
         #The required paramters are different for site and simulator
         if site:
-            self.max_look_ahead_distance = 30.0
-            self.min_look_ahead_distance = 2.0        
+            self.max_look_ahead_distance = 3000.0
+            self.min_look_ahead_distance = 0.1        
         else:
             self.max_look_ahead_distance = 100.0
             self.min_look_ahead_distance = 25.0
@@ -119,6 +119,11 @@ class TLDetector(object):
                 if self.state != self.last_state:
                     print("======= NEW PREDICTED LIGHT STATE =======")
                     print("LIGHT STATE: ",self.state)
+                    print("light_wp: ",light_wp)
+                    if (self.pose):
+                        now_wp = self.get_closest_waypoint(self.pose.pose)
+                        print("now_wp: ",now_wp)
+
                     self.last_state = self.state
                     
                 light_wp = light_wp if state == TrafficLight.RED else -1
@@ -220,7 +225,7 @@ class TLDetector(object):
             #determine if the closest light is close enought to worry about
             #determine if we have passed the stop line
             #and determine that the light is infront of the car
-            if  light_distance < self.max_look_ahead_distance and \
+            if  True or light_distance < self.max_look_ahead_distance and \
                 light_distance > self.min_look_ahead_distance and \
                 car_orient * light_orient > 1:
 

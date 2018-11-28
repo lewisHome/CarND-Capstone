@@ -2,6 +2,8 @@ from styx_msgs.msg import TrafficLight
 import tensorflow as tf
 import numpy as np
 import cv2
+import time
+
 
 
 class TLClassifier(object):
@@ -47,6 +49,11 @@ class TLClassifier(object):
                int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
            """
+           tnow = int(time.time()) % 10;
+           if (tnow > 5):
+                return TrafficLight.GREEN
+           else:
+                return TrafficLight.RED
             
            #image comes from cv_bridge as BGR image but networks have been trained with RGB images
            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
@@ -66,7 +73,7 @@ class TLClassifier(object):
            
            #if a light is detected with over 30% confidence use prediction as output
            #otherwise return trafficLight.UNKNOWN
-           if scores[0]>0.3:
+           if scores[0]>0.1:
                prediction = classes[0]
            else:
                prediction = 4
