@@ -245,7 +245,7 @@ class TLDetector(object):
             light_stop_pose.position.y = 16.2
             light_stop_wp = self.get_closest_waypoint(light_stop_pose)
             pred_state = self.get_light_state(light)
-			traffic_light_found = True
+            traffic_light_found = True
         #if traffic light not found then we are free to travel else pass
         #light stop line and predicted light state
         if not traffic_light_found:          
