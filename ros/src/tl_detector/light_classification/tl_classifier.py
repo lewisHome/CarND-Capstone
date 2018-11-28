@@ -2,16 +2,17 @@ from styx_msgs.msg import TrafficLight
 import tensorflow as tf
 import numpy as np
 import cv2
-import sys
+
 
 class TLClassifier(object):
     def __init__(self):
-        
+        self.init = False
+        #Define model location
         model_name = 'ssd_mobilenet' #ssd_inception, ssd_mobilenet
         model_path = '/home/workspace/CarND-Capstone/ros/src/tl_detector/light_classification/frozen_%s/frozen_inference_graph.pb'%model_name
 
+        #create object detector
         detection_graph = tf.Graph()
-
         with detection_graph.as_default():
             od_graph_def = tf.GraphDef()
 
@@ -22,18 +23,20 @@ class TLClassifier(object):
                
         with detection_graph.as_default():
             with tf.Session(graph=detection_graph) as self.sess:
-                # Definite input and output Tensors for detection_graph
+                # Define input tensor for detection_graph
                 self.image_tensor = detection_graph.get_tensor_by_name('image_tensor:0')
 
-                # Each box represents a part of the image where a particular object was detected.
-                self.detection_boxes = detection_graph.get_tensor_by_name('detection_boxes:0')
-
-                # Each score represent how level of confidence for each of the objects.
-                # Score is shown on the result image, together with the class label.
+                # Define output tensor for detection graph
+                # score returns confidence in detection results
                 self.detection_scores = detection_graph.get_tensor_by_name('detection_scores:0')
+                # Class returns type of detection
                 self.detection_classes = detection_graph.get_tensor_by_name('detection_classes:0')
-                self.num_detections = detection_graph.get_tensor_by_name('num_detections:0')
-
+                
+                self.init = True
+                
+    def model_loaded(self):
+        return self.init
+    
     def get_classification(self, image):
            """Determines the color of the traffic light in the image
 
@@ -44,25 +47,36 @@ class TLClassifier(object):
                int: ID of traffic light color (specified in styx_msgs/TrafficLight)
 
            """
+            
+           #image comes from cv_bridge as BGR image but networks have been trained with RGB images
            image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+            
+           #expand iamge to 4D array to pass to NN
            image_np_expanded = np.expand_dims(image, axis=0)
 
-           (_,scores,classes,_) = self.sess.run(
-                 [self.detection_boxes, self.detection_scores, self.detection_classes, self.num_detections],
+           #run image through NN
+           (scores,classes) = self.sess.run(
+                 [self.detection_scores, self.detection_classes],
                  feed_dict={self.image_tensor: image_np_expanded})
 
+           #remove redundant dimensions
            scores = np.squeeze(scores)
            classes = np.squeeze(classes).astype(np.int32)
 
-           if scores[0]>0.1:
-               prediction = classes[0]
            
+           #if a light is detected with over 30% confidence use prediction as output
+           #otherwise return trafficLight.UNKNOWN
+           if scores[0]>0.3:
+               prediction = classes[0]
+           else:
+               prediction = 4
+            
            #remap classes to match simulator ground truth
            if prediction == 1:
-               return 2
+               return TrafficLight.GREEN
            elif prediction == 2:
-               return 0
+               return TrafficLight.RED
            elif prediction == 3:
-               return 1
+               return TrafficLight.YELLOW
            else:
-               return 4
+               return TrafficLight.UNKNOWN 
