@@ -8,7 +8,6 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 from light_classification.tl_classifier import TLClassifier
 import tf
-import cv2
 import yaml
 import math
 
@@ -28,14 +27,6 @@ class TLDetector(object):
         self.lights = []
         self.lights_map = []
         self.got_lights_map=False
-        self.max_look_ahead_distance = 100.0
-        self.min_look_ahead_distance = 25.0
-        self.light_distance = 0.0
-        self.image = None
-        
-        self.pred_score = 0.0
-        self.pred_ratio = 0.0
-        self.accuracy = 0.0
         
         self.last_image_time = rospy.get_time()
         self.processing_image = False
@@ -43,12 +34,12 @@ class TLDetector(object):
         self.state = TrafficLight.UNKNOWN
         self.last_state = TrafficLight.UNKNOWN
         
-        self.ground_truth = TrafficLight.UNKNOWN
-        self.last_ground_truth = TrafficLight.UNKNOWN
-        
         self.last_wp = -1
         self.state_count = 0
-        self.ground_truth_count = 0
+
+        self.bridge = CvBridge()
+        self.light_classifier = TLClassifier()
+        self.listener = tf.TransformListener()
         
         sub1 = rospy.Subscriber('/current_pose', PoseStamped, self.pose_cb, queue_size=1)
         sub2 = rospy.Subscriber('/base_waypoints', Lane, self.waypoints_cb)
@@ -65,25 +56,26 @@ class TLDetector(object):
 
         config_string = rospy.get_param("/traffic_light_config")
         self.config = yaml.load(config_string)
+        site = self.config['is_site']
+        
+        #THe classifier is only invoked within a certain distance of the traffic light
+        #The required paramters are different for site and simulator
+        if site:
+            self.max_look_ahead_distance = 30.0
+            self.min_look_ahead_distance = 2.0        
+        else:
+            self.max_look_ahead_distance = 100.0
+            self.min_look_ahead_distance = 25.0
 
         self.upcoming_red_light_pub = rospy.Publisher('/traffic_waypoint', Int32, queue_size=1)
 
-        self.bridge = CvBridge()
-        self.light_classifier = TLClassifier()
-        self.listener = tf.TransformListener()
-
-        #self.updateRate = 8
-        #rate = rospy.Rate(2)
         rospy.spin()
 
     def pose_cb(self, msg):
         self.pose = msg
 
-
     def waypoints_cb(self, waypoints):
-        print(len(waypoints.waypoints))
         if not self.got_waypoints:
-            print("update waypoints")
             self.waypoints = waypoints.waypoints
             self.got_waypoints = True
             
@@ -99,49 +91,42 @@ class TLDetector(object):
 
         """
         now_time = rospy.get_time()
-        # limit image update to max 2 fps
+        # limit image update to max 10 fps
         if (self.processing_image == False) and (now_time > (self.last_image_time + 0.1)):
             self.last_image_time = now_time
             
             self.has_image = True
             self.camera_image = msg
-            #try:
-            light_wp, state = self.process_traffic_lights()
-            #except:
-            #    light_wp, state = -1, 4
-            #    pass
+            
+            #Try and except invoked to ensure a stop condition is passed to the path planner
+            #if the traffic light classifier is not functioning
+            try:
+                light_wp, state = self.process_traffic_lights()
+            except:
+                light_wp = -1
+                state = 0
+
             '''
             Publish upcoming red lights at camera frequency.
             Each predicted state has to occur `STATE_COUNT_THRESHOLD` number
             of times till we start using it. Otherwise the previous stable state is
             used.
             '''
-            if self.ground_truth != self.last_ground_truth:
-                self.ground_truth_count = 0
-                self.accuracy = 0
-                self.last_ground_truth = self.ground_truth
-            
-            if self.state != self.ground_truth:
-                self.accuracy += 1
-                
             if self.state != state:
                 self.state_count = 0
                 self.state = state
             elif self.state_count >= STATE_COUNT_THRESHOLD:
-                if self.state_count == STATE_COUNT_THRESHOLD:
-                    print("======== PREDICTION CHANGE ======")
-                    print("GROUND TRUTH STATE: ",self.ground_truth)
-                    print("PREDICTED STATE: ",self.state)
-
-
-                self.last_state = self.state
+                if self.state != self.last_state:
+                    print("======= NEW PREDICTED LIGHT STATE =======")
+                    print("LIGHT STATE: ",self.state)
+                    self.last_state = self.state
+                    
                 light_wp = light_wp if state == TrafficLight.RED else -1
                 self.last_wp = light_wp
                 self.upcoming_red_light_pub.publish(Int32(light_wp))
             else:
                 self.upcoming_red_light_pub.publish(Int32(self.last_wp))
             self.state_count += 1
-            self.ground_truth_count += 1
 
     def get_closest_waypoint(self, pose):
         """Identifies the closest path waypoint to the given position
@@ -190,11 +175,10 @@ class TLDetector(object):
                 pass
         except:
             return
-
+        #Get Image
         cv_image = self.bridge.imgmsg_to_cv2(self.camera_image, "bgr8")
 
-        #Get classification
-       
+        #Get classification       
         return self.light_classifier.get_classification(cv_image)
 
     def process_traffic_lights(self):
@@ -212,7 +196,7 @@ class TLDetector(object):
             return
         
         #determine direction of car travel
-        q = [self.pose.pose.orientation.x, self.pose.pose.orientation.y, self.pose.pose.orientation.z, self.pose.pose.orientation.w]        
+        q = [self.pose.pose.orientation.x, self.pose.pose.orientation.y, self.pose.pose.orientation.z, self.pose.pose.orientation.w]       
         theta = tf.transformations.euler_from_quaternion(q)[2]
         x = self.pose.pose.position.x
         x_in_front = x  + 1 * math.cos(theta)
@@ -220,7 +204,7 @@ class TLDetector(object):
         y_in_front = y + 1 * math.sin(theta)
 
         traffic_light_found = False
-        light_state = TrafficLight.UNKNOWN        
+        pred_state = TrafficLight.UNKNOWN        
 
         # run through all the lights and find out if there is a light close enough to be concerened about
         for light in self.lights:
@@ -233,22 +217,19 @@ class TLDetector(object):
 
             # prevent "referenced before assignment" error
             pred_state = -1
-               
-            #determine if the closest light is in front or behind the car
+            #determine if the closest light is close enought to worry about
+            #determine if we have passed the stop line
+            #and determine that the light is infront of the car
             if  light_distance < self.max_look_ahead_distance and \
                 light_distance > self.min_look_ahead_distance and \
                 car_orient * light_orient > 1:
 
-                self.ground_truth = light.state
-                self.light_distance = light_distance
                 traffic_light_found = True
-                #try:
                 pred_state = self.get_light_state(light)
-                #except:
-                #    pred_state = 4
-                    
+                  
                 minimum_light_to_line_distance = 1e6
                 light_stop_pose = Pose()
+                
                 #find stop line closest to light
                 for stop_line in self.config['stop_line_positions']:
                     light_to_stop_line_distance = (((light_x - stop_line[0])**2 + (light_y - stop_line[1])**2)**0.5)
@@ -259,21 +240,14 @@ class TLDetector(object):
                 
                 #find waypoint corresponding to stop line
                 light_stop_wp = self.get_closest_waypoint(light_stop_pose)
+                break
                 
-                #Remap predicted states to match ground truth states
-                if pred_state == 0:
-                    light_state = TrafficLight.RED
-                elif pred_state == 1:
-                    light_state = TrafficLight.YELLOW
-                elif pred_state == 2:
-                    light_state = TrafficLight.GREEN
-                else:
-                    light_state = TrafficLight.UNKNOWN               
-    
+        #if traffic light not found then we are free to travel else pass
+        #light stop line and predicted light state
         if not traffic_light_found:          
-            return -1, light_state
+            return -1, 4
         else:
-            return light_stop_wp, light_state
+            return light_stop_wp, pred_state
 
 
 if __name__ == '__main__':
