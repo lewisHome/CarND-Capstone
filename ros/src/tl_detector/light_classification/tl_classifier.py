@@ -9,7 +9,7 @@ class TLClassifier(object):
         self.init = False
         #Define model location
         model_name = 'ssd_mobilenet' #ssd_inception, ssd_mobilenet
-        model_path = '/home/workspace/CarND-Capstone/ros/src/tl_detector/light_classification/frozen_%s/frozen_inference_graph.pb'%model_name
+        model_path = 'light_classification/frozen_%s/frozen_inference_graph.pb'%model_name
 
         #create object detector
         detection_graph = tf.Graph()
